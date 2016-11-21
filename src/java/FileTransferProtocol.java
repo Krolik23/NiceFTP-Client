@@ -106,7 +106,7 @@ public class FileTransferProtocol {
                     return;
                 }
             }
-            FileOutputStream fout=new FileOutputStream(f);
+            FileOutputStream fout=new FileOutputStream("C:/Users/Królik/Desktop/InstaLoader/downloadedFile.exe");
             int ch;
             String temp;
             do

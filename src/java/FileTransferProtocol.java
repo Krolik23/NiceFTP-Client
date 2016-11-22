@@ -1,5 +1,7 @@
 import java.io.*;
 import java.net.Socket;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 public class FileTransferProtocol {
@@ -10,6 +12,7 @@ public class FileTransferProtocol {
     BufferedReader reader;
 
     DataOutputStream clientTransferDataOutput;
+    DataInputStream clientTransferDataInput;
 
 
     public FileTransferProtocol(Socket clientCommunicationSocket){
@@ -26,9 +29,18 @@ public class FileTransferProtocol {
     void SendFile() throws Exception
     {
 
-        String filename;
-        System.out.print("Enter File Name :");
+        String filename, fileExtension;
+        System.out.print("Enter File Path :");
         filename=reader.readLine();
+
+        Pattern trimPattern = Pattern.compile("(\\.[a-z]*)");
+        Matcher matcher = trimPattern.matcher(filename);
+        if(matcher.find()){
+            fileExtension = matcher.group(1);
+        }
+        else {fileExtension = "";}
+
+
 
         File file = new File(filename);
         long length = file.length();
@@ -44,7 +56,7 @@ public class FileTransferProtocol {
         if(msgFromServer.compareTo("File Already Exists")==0)
         {
             String Option;
-            System.out.println("File Already Exists. Want to OverWrite (Y/N) ?");
+            System.out.println("File Already Exists On The Server. Do you want to Append to that file (Y/N) ?");
             Option=reader.readLine();
             if(Option.equals("Y"))
             {
@@ -56,14 +68,20 @@ public class FileTransferProtocol {
                 return;
             }
         }
-        Socket clientTransferSocket = new Socket("127.0.0.1",4888);
-        clientTransferDataOutput = new DataOutputStream(clientTransferSocket.getOutputStream());
+        String sendToDirPath, sendToThisPath;
+        System.out.print("Set target directory path: ");
+        sendToDirPath = reader.readLine() + "\\";
+        System.out.print("Set filename: ");
+        sendToThisPath = sendToDirPath + reader.readLine() + fileExtension;
+        clientCommunicationDataOutput.writeUTF(sendToThisPath);
 
+        Socket clientTransferSocket = new Socket("127.0.0.1",1200);
+        clientTransferDataOutput = new DataOutputStream(clientTransferSocket.getOutputStream());
         System.out.println("Sending File ...");
 
         InputStream fin = new FileInputStream(file);
 
-        //FileInputStream fin=new FileInputStream(file);
+
         int ch;
         do
         {
@@ -72,33 +90,43 @@ public class FileTransferProtocol {
         }
         while(ch!=-1);
         fin.close();
+        System.out.println("\n***********************************************\n");
         System.out.println(clientCommunicationDataInput.readUTF());
+        System.out.println("\n***********************************************\n");
         clientTransferSocket.close();
+        clientTransferDataOutput.close();
 
     }
 
 
     void ReceiveFile() throws Exception
     {
-        String fileName;
-        System.out.print("Enter File Name :");
-        fileName=reader.readLine();
-        clientCommunicationDataOutput.writeUTF(fileName);
+        String filename, fileExtension;
+        System.out.print("Enter Server File Path : ");
+        filename=reader.readLine();
+
+        Pattern trimPattern = Pattern.compile("(\\.[a-z]*)");
+        Matcher matcher = trimPattern.matcher(filename);
+        if(matcher.find()){
+            fileExtension = matcher.group(1);
+        }
+        else {fileExtension = "";}
+
+        clientCommunicationDataOutput.writeUTF(filename);
         String msgFromServer= clientCommunicationDataInput.readUTF();
 
         if(msgFromServer.compareTo("File Not Found")==0)
         {
-            System.out.println("File not found on Server ...");
+            System.out.println("File not found on the Server ...");
             return;
         }
         else if(msgFromServer.compareTo("READY")==0)
         {
-            System.out.println("Receiving File ...");
-            File f=new File(fileName);
+            File f=new File(filename);
             if(f.exists())
             {
                 String Option;
-                System.out.println("File Already Exists. Want to OverWrite (Y/N) ?");
+                System.out.println("File Already Exists. Want to Save it Anyway (Y/N) ?");
                 Option=reader.readLine();
                 if(Option=="N")
                 {
@@ -106,12 +134,24 @@ public class FileTransferProtocol {
                     return;
                 }
             }
-            FileOutputStream fout=new FileOutputStream("C:/Users/Królik/Desktop/InstaLoader/downloadedFile.exe");
+
+            String sendToDirPath, saveToThisPath;
+            System.out.print("Set save directory path: ");
+            sendToDirPath = reader.readLine() + "\\";
+            System.out.print("Set filename: ");
+            saveToThisPath = sendToDirPath + reader.readLine() + fileExtension;
+
+            Socket clientTransferSocket = new Socket("127.0.0.1",1200); //połączenie na porcie 1200
+            clientTransferDataInput = new DataInputStream(clientTransferSocket.getInputStream());
+            FileOutputStream fout=new FileOutputStream(saveToThisPath);
+
+            System.out.println("Receiving File ...");
+
             int ch;
             String temp;
             do
             {
-                temp= clientCommunicationDataInput.readUTF();
+                temp= clientTransferDataInput.readUTF();
                 ch=Integer.parseInt(temp);
                 if(ch!=-1)
                 {
@@ -119,10 +159,36 @@ public class FileTransferProtocol {
                 }
             }while(ch!=-1);
             fout.close();
+            clientTransferDataInput.close();
+            clientTransferSocket.close();
+            System.out.println("\n***********************************************\n");
             System.out.println(clientCommunicationDataInput.readUTF());
+            System.out.println("\n***********************************************\n");
 
         }
 
+
+    }
+
+    public void DeleteFile(){
+        try {
+            String filePath;
+            System.out.print("Pass deletion file path : ");
+            filePath = reader.readLine();
+            clientCommunicationDataOutput.writeUTF(filePath);
+            String msg = clientCommunicationDataInput.readUTF();
+            if(msg.compareTo("DELATED") == 0){
+                System.out.println("\n***********************************************\n");
+                System.out.println("File Was Deleted Succesfully");
+                System.out.println("\n***********************************************\n");
+            }
+            else{
+                System.out.println(clientCommunicationDataInput.readUTF());
+            }
+        }
+        catch(IOException exception){
+            System.out.println(exception);
+        }
 
     }
 
@@ -133,27 +199,32 @@ public class FileTransferProtocol {
         while(true)
         {
             System.out.println("[ MENU ]");
-            System.out.println("1. Send File");
-            System.out.println("2. Receive File");
-            System.out.println("3. Exit");
-            System.out.print("\nEnter Choice :");
+            System.out.println("1. APPE (APPEND Data)");
+            System.out.println("2. RETR (RETRIVE Data)");
+            System.out.println("3. DELE (DELETE)");
+            System.out.println("4. QUIT (DISCONNECT)");
+            System.out.print("\nEnter Choice : ");
             int choice;
             choice=Integer.parseInt(reader.readLine());
             if(choice==1)
             {
-                clientCommunicationDataOutput.writeUTF("SEND");
+                clientCommunicationDataOutput.writeUTF("APPE");
                 SendFile();
 
             }
             else if(choice==2)
             {
-                clientCommunicationDataOutput.writeUTF("RECEIVE");
+                clientCommunicationDataOutput.writeUTF("RETR");
                 ReceiveFile();
 
             }
+            else if(choice==3){
+                clientCommunicationDataOutput.writeUTF("DELE");
+                DeleteFile();
+            }
             else
             {
-                clientCommunicationDataOutput.writeUTF("DISCONNECT");
+                clientCommunicationDataOutput.writeUTF("QUIT");
                 System.exit(1);
             }
         }

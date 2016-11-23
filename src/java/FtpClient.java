@@ -6,7 +6,7 @@ public class FtpClient {
             try {
                 Socket clientComunicationSocket = new Socket("127.0.0.1",21);
                 FileTransferProtocol transferFile = new FileTransferProtocol(clientComunicationSocket);
-                transferFile.Menu();
+                transferFile.menu();
             }
             catch(Exception ex)
             {

@@ -28,7 +28,7 @@ public class FileTransferProtocol {
 
     }
 
-    void SendFile() throws Exception
+    void sendFile() throws Exception
     {
 
         String filename, fileExtension;
@@ -44,7 +44,6 @@ public class FileTransferProtocol {
 
 
         File file = new File(filename);
-        //long length = file.length();
         if(!file.exists())
         {
             System.out.println("File not Exists...");
@@ -103,7 +102,7 @@ public class FileTransferProtocol {
     }
 
 
-    void ReceiveFile() throws Exception
+    void receiveFile() throws Exception
     {
         String filename, fileExtension;
         System.out.print("Enter Server File Path : ");
@@ -170,7 +169,7 @@ public class FileTransferProtocol {
         }
     }
 
-    public void DeleteFile(){
+    public void deleteFile(){
         try {
             String filePath;
             System.out.print("Pass deletion file path : ");
@@ -194,7 +193,7 @@ public class FileTransferProtocol {
 
 
 
-    void Menu() throws Exception {
+    void menu() throws Exception {
 
         while(true)
         {
@@ -209,18 +208,18 @@ public class FileTransferProtocol {
             if(choice==1)
             {
                 clientCommunicationDataOutput.writeUTF("APPE");
-                SendFile();
+                sendFile();
 
             }
             else if(choice==2)
             {
                 clientCommunicationDataOutput.writeUTF("RETR");
-                ReceiveFile();
+                receiveFile();
 
             }
             else if(choice==3){
                 clientCommunicationDataOutput.writeUTF("DELE");
-                DeleteFile();
+                deleteFile();
             }
             else
             {

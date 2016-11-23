@@ -11,11 +11,13 @@ public class FileTransferProtocol {
     DataOutputStream clientCommunicationDataOutput;
     BufferedReader reader;
 
-    DataOutputStream clientTransferDataOutput;
-    DataInputStream clientTransferDataInput;
+
+    BufferedInputStream fileInput;
+    BufferedOutputStream fileOutput;
 
 
     public FileTransferProtocol(Socket clientCommunicationSocket){
+
         try {
             this.clientCommunicationSocket = clientCommunicationSocket;
             clientCommunicationDataInput = new DataInputStream(clientCommunicationSocket.getInputStream());
@@ -33,7 +35,7 @@ public class FileTransferProtocol {
         System.out.print("Enter File Path :");
         filename=reader.readLine();
 
-        Pattern trimPattern = Pattern.compile("(\\.[a-z]*)");
+        Pattern trimPattern = Pattern.compile("(\\.[a-z0-9]*)");
         Matcher matcher = trimPattern.matcher(filename);
         if(matcher.find()){
             fileExtension = matcher.group(1);
@@ -41,9 +43,8 @@ public class FileTransferProtocol {
         else {fileExtension = "";}
 
 
-
         File file = new File(filename);
-        long length = file.length();
+        //long length = file.length();
         if(!file.exists())
         {
             System.out.println("File not Exists...");
@@ -68,6 +69,7 @@ public class FileTransferProtocol {
                 return;
             }
         }
+
         String sendToDirPath, sendToThisPath;
         System.out.print("Set target directory path: ");
         sendToDirPath = reader.readLine() + "\\";
@@ -76,26 +78,28 @@ public class FileTransferProtocol {
         clientCommunicationDataOutput.writeUTF(sendToThisPath);
 
         Socket clientTransferSocket = new Socket("127.0.0.1",1200);
-        clientTransferDataOutput = new DataOutputStream(clientTransferSocket.getOutputStream());
-        System.out.println("Sending File ...");
 
         InputStream fin = new FileInputStream(file);
+        fileInput = new BufferedInputStream(fin);
+        fileOutput = new BufferedOutputStream(clientTransferSocket.getOutputStream());
 
+        System.out.println("Sending File ...");
 
-        int ch;
-        do
-        {
-            ch = fin.read();
-            clientTransferDataOutput.writeUTF(String.valueOf(ch));
+        byte[] buffer = new byte[2048];
+        int bytesRead;
+
+        while((bytesRead = fileInput.read(buffer)) != -1){
+            fileOutput.write(buffer,0,bytesRead);
         }
-        while(ch!=-1);
+
+        fileOutput.flush();
+        fileOutput.close();
+        fileInput.close();
         fin.close();
+
         System.out.println("\n***********************************************\n");
         System.out.println(clientCommunicationDataInput.readUTF());
         System.out.println("\n***********************************************\n");
-        clientTransferSocket.close();
-        clientTransferDataOutput.close();
-
     }
 
 
@@ -105,7 +109,7 @@ public class FileTransferProtocol {
         System.out.print("Enter Server File Path : ");
         filename=reader.readLine();
 
-        Pattern trimPattern = Pattern.compile("(\\.[a-z]*)");
+        Pattern trimPattern = Pattern.compile("(\\.[a-z0-9]*)");
         Matcher matcher = trimPattern.matcher(filename);
         if(matcher.find()){
             fileExtension = matcher.group(1);
@@ -142,32 +146,28 @@ public class FileTransferProtocol {
             saveToThisPath = sendToDirPath + reader.readLine() + fileExtension;
 
             Socket clientTransferSocket = new Socket("127.0.0.1",1200); //połączenie na porcie 1200
-            clientTransferDataInput = new DataInputStream(clientTransferSocket.getInputStream());
+
+            fileInput = new BufferedInputStream(clientTransferSocket.getInputStream());
             FileOutputStream fout=new FileOutputStream(saveToThisPath);
+            fileOutput = new BufferedOutputStream(fout);
 
             System.out.println("Receiving File ...");
 
-            int ch;
-            String temp;
-            do
-            {
-                temp= clientTransferDataInput.readUTF();
-                ch=Integer.parseInt(temp);
-                if(ch!=-1)
-                {
-                    fout.write(ch);
-                }
-            }while(ch!=-1);
-            fout.close();
-            clientTransferDataInput.close();
+            int i;
+
+            while((i = fileInput.read()) != -1){
+                fileOutput.write(i);
+            }
+
+            fileOutput.close();
+            fileInput.close();
             clientTransferSocket.close();
+            fout.close();
+
             System.out.println("\n***********************************************\n");
             System.out.println(clientCommunicationDataInput.readUTF());
             System.out.println("\n***********************************************\n");
-
         }
-
-
     }
 
     public void DeleteFile(){
@@ -177,9 +177,9 @@ public class FileTransferProtocol {
             filePath = reader.readLine();
             clientCommunicationDataOutput.writeUTF(filePath);
             String msg = clientCommunicationDataInput.readUTF();
-            if(msg.compareTo("DELATED") == 0){
+            if(msg.compareTo("DELETED") == 0){
                 System.out.println("\n***********************************************\n");
-                System.out.println("File Was Deleted Succesfully");
+                System.out.println("File Was Deleted Successfully");
                 System.out.println("\n***********************************************\n");
             }
             else{
@@ -229,7 +229,4 @@ public class FileTransferProtocol {
             }
         }
     }
-
-
-
 }

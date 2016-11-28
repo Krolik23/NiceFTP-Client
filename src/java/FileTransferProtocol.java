@@ -48,12 +48,15 @@ public class FileTransferProtocol {
         {
             System.out.println("File not Exists...");
             clientCommunicationDataOutput.writeUTF("File not found");
+            clientCommunicationDataInput.readUTF();
             return;
         }
         clientCommunicationDataOutput.writeUTF(filename);
 
+
+
         String msgFromServer= clientCommunicationDataInput.readUTF();
-        if(msgFromServer.compareTo("File Already Exists")==0)
+        if(msgFromServer.compareTo(" 450 Requested file action not taken; File Already Exists")==0)
         {
             String Option;
             System.out.println("File Already Exists On The Server. Do you want to Append to that file (Y/N) ?");
@@ -69,6 +72,7 @@ public class FileTransferProtocol {
             }
         }
 
+
         String sendToDirPath, sendToThisPath;
         System.out.print("Set target directory path: ");
         sendToDirPath = reader.readLine() + "\\";
@@ -76,12 +80,14 @@ public class FileTransferProtocol {
         sendToThisPath = sendToDirPath + reader.readLine() + fileExtension;
         clientCommunicationDataOutput.writeUTF(sendToThisPath);
 
+
         Socket clientTransferSocket = new Socket("127.0.0.1",1200);
 
         InputStream fin = new FileInputStream(file);
         fileInput = new BufferedInputStream(fin);
         fileOutput = new BufferedOutputStream(clientTransferSocket.getOutputStream());
 
+        clientCommunicationDataInput.readUTF();
         System.out.println("Sending File ...");
 
         byte[] buffer = new byte[2048];
@@ -95,9 +101,12 @@ public class FileTransferProtocol {
         fileOutput.close();
         fileInput.close();
         fin.close();
+        clientCommunicationDataInput.readUTF();
+
+        clientCommunicationDataInput.readUTF();
 
         System.out.println("\n***********************************************\n");
-        System.out.println(clientCommunicationDataInput.readUTF());
+        System.out.println("File Was Sent Successfully");
         System.out.println("\n***********************************************\n");
     }
 
@@ -115,15 +124,17 @@ public class FileTransferProtocol {
         }
         else {fileExtension = "";}
 
+
         clientCommunicationDataOutput.writeUTF(filename);
         String msgFromServer= clientCommunicationDataInput.readUTF();
 
-        if(msgFromServer.compareTo("File Not Found")==0)
+        if(msgFromServer.compareTo(" File Not Found")==0)
         {
+            clientCommunicationDataInput.readUTF();
             System.out.println("File not found on the Server ...");
             return;
         }
-        else if(msgFromServer.compareTo("READY")==0)
+        else if(msgFromServer.compareTo(" 150 OK")==0)
         {
             File f=new File(filename);
             if(f.exists())
@@ -154,6 +165,8 @@ public class FileTransferProtocol {
 
             int i;
 
+            clientCommunicationDataInput.readUTF();
+
             while((i = fileInput.read()) != -1){
                 fileOutput.write(i);
             }
@@ -164,8 +177,9 @@ public class FileTransferProtocol {
             fout.close();
 
             System.out.println("\n***********************************************\n");
-            System.out.println(clientCommunicationDataInput.readUTF());
+            System.out.println("File Saved Successfully");
             System.out.println("\n***********************************************\n");
+            clientCommunicationDataInput.readUTF();
         }
     }
 
@@ -194,9 +208,10 @@ public class FileTransferProtocol {
 
 
     void menu() throws Exception {
-
+        String msg = clientCommunicationDataInput.readUTF();
         while(true)
         {
+
             System.out.println("[ MENU ]");
             System.out.println("1. APPE (APPEND Data)");
             System.out.println("2. RETR (RETRIVE Data)");
@@ -207,6 +222,7 @@ public class FileTransferProtocol {
             choice=Integer.parseInt(reader.readLine());
             if(choice==1)
             {
+
                 clientCommunicationDataOutput.writeUTF("APPE");
                 sendFile();
 

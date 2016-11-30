@@ -1,7 +1,9 @@
 import java.io.*;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.io.Console;
 
 
 public class FileTransferProtocol {
@@ -28,22 +30,65 @@ public class FileTransferProtocol {
 
     }
 
+    public void logToFTP() throws Exception{
+
+        String user, password;
+        while(true) {
+            System.out.print("User: ");
+            user = reader.readLine();
+            System.out.print("Password: ");
+            password = reader.readLine();
+
+            clientCommunicationDataOutput.writeUTF("USER");
+            clientCommunicationDataOutput.writeUTF(user);
+            String serverLoginResponse = clientCommunicationDataInput.readUTF();
+
+            clientCommunicationDataOutput.writeUTF("PASS");
+            clientCommunicationDataOutput.writeUTF(password);
+            String serverPasswordResponse = clientCommunicationDataInput.readUTF();
+
+
+            if (serverLoginResponse.compareTo("331 User name okay, need password") == 0
+                    && serverPasswordResponse.compareTo("230 User logged in, proceed") == 0) {
+                break;
+            }
+            else {}
+
+        }
+
+
+    }
+
     void sendFile() throws Exception
     {
 
-        String filename, fileExtension;
+        listDir();
+        System.out.println();
+        String filePath, fileExtension, filename;
         System.out.print("Enter File Path :");
-        filename=reader.readLine();
+        filePath=reader.readLine();
 
         Pattern trimPattern = Pattern.compile("(\\.[a-z0-9]*)");
-        Matcher matcher = trimPattern.matcher(filename);
+        Matcher matcher = trimPattern.matcher(filePath);
         if(matcher.find()){
             fileExtension = matcher.group(1);
         }
         else {fileExtension = "";}
 
+        trimPattern = Pattern.compile("([a-zA-Z0-9]*\\.[a-z0-9]*)");
+        matcher = trimPattern.matcher(filePath);
+        if(matcher.find()){
+            filename = matcher.group(1);
+        }
+        else {
+            filename = "";
+            System.out.println("Wrong path");
+        }
 
-        File file = new File(filename);
+
+        String fileServerPath = "C:/Users/Królik/IdeaProjects/NiceFTP-Server/FTPServer/" + filename;
+        File fileOnServer = new File(fileServerPath);
+        File file = new File(filePath);
         if(!file.exists())
         {
             System.out.println("File not Exists...");
@@ -51,7 +96,7 @@ public class FileTransferProtocol {
             clientCommunicationDataInput.readUTF();
             return;
         }
-        clientCommunicationDataOutput.writeUTF(filename);
+        clientCommunicationDataOutput.writeUTF(fileServerPath);
 
 
 
@@ -74,8 +119,8 @@ public class FileTransferProtocol {
 
 
         String sendToDirPath, sendToThisPath;
-        System.out.print("Set target directory path: ");
-        sendToDirPath = reader.readLine() + "\\";
+        //System.out.print("Set target directory path: ");
+        sendToDirPath = "C:/Users/Królik/IdeaProjects/NiceFTP-Server/FTPServer" + "/"; //reader.readLine()
         System.out.print("Set filename: ");
         sendToThisPath = sendToDirPath + reader.readLine() + fileExtension;
         clientCommunicationDataOutput.writeUTF(sendToThisPath);
@@ -113,19 +158,23 @@ public class FileTransferProtocol {
 
     void receiveFile() throws Exception
     {
-        String filename, fileExtension;
+        listServerDir();
+        String filePath, fileExtension;
         System.out.print("Enter Server File Path : ");
-        filename=reader.readLine();
+        filePath=reader.readLine();
 
         Pattern trimPattern = Pattern.compile("(\\.[a-z0-9]*)");
-        Matcher matcher = trimPattern.matcher(filename);
+        Matcher matcher = trimPattern.matcher(filePath);
         if(matcher.find()){
             fileExtension = matcher.group(1);
         }
-        else {fileExtension = "";}
+        else {
+            System.out.println("Wrong path");
+            fileExtension = "";
+        }
 
 
-        clientCommunicationDataOutput.writeUTF(filename);
+        clientCommunicationDataOutput.writeUTF(filePath);
         String msgFromServer= clientCommunicationDataInput.readUTF();
 
         if(msgFromServer.compareTo(" File Not Found")==0)
@@ -136,7 +185,15 @@ public class FileTransferProtocol {
         }
         else if(msgFromServer.compareTo(" 150 OK")==0)
         {
-            File f=new File(filename);
+
+            String sendToDirPath, saveToThisPath;
+            System.out.print("Set save directory path: ");
+            sendToDirPath = reader.readLine() + "\\";
+            System.out.print("Set filename: ");
+            saveToThisPath = sendToDirPath + reader.readLine() + fileExtension;
+
+
+            File f=new File(saveToThisPath);
             if(f.exists())
             {
                 String Option;
@@ -144,16 +201,11 @@ public class FileTransferProtocol {
                 Option=reader.readLine();
                 if(Option=="N")
                 {
-                    clientCommunicationDataOutput.flush();
+                    clientCommunicationDataOutput.writeUTF("552 Requested file action aborted");
                     return;
                 }
             }
-
-            String sendToDirPath, saveToThisPath;
-            System.out.print("Set save directory path: ");
-            sendToDirPath = reader.readLine() + "\\";
-            System.out.print("Set filename: ");
-            saveToThisPath = sendToDirPath + reader.readLine() + fileExtension;
+            clientCommunicationDataOutput.writeUTF("150 OK");
 
             Socket clientTransferSocket = new Socket("127.0.0.1",1200); //połączenie na porcie 1200
 
@@ -190,13 +242,20 @@ public class FileTransferProtocol {
             filePath = reader.readLine();
             clientCommunicationDataOutput.writeUTF(filePath);
             String msg = clientCommunicationDataInput.readUTF();
-            if(msg.compareTo("DELETED") == 0){
+            if(msg.compareTo(" 250 Requested file action okay, completed") == 0){
                 System.out.println("\n***********************************************\n");
                 System.out.println("File Was Deleted Successfully");
                 System.out.println("\n***********************************************\n");
             }
-            else{
-                System.out.println(clientCommunicationDataInput.readUTF());
+            else if(msg.compareTo(" 550 Requested action not taken; file not found") == 0){
+                String exceptionText = clientCommunicationDataInput.readUTF();
+                System.out.println(exceptionText);
+            }
+            else if(msg.compareTo(" 550 Requested action not taken; directory not empty") == 0){
+                System.out.println("!!! Directory is not empty !!!");
+            }
+            else {
+                System.out.println("!!! Unidentified exception occurred !!!");
             }
         }
         catch(IOException exception){
@@ -204,11 +263,49 @@ public class FileTransferProtocol {
         }
 
     }
+    void listDir() throws Exception {
+        System.out.print("Pass directory path: ");
+        String dirPath = reader.readLine();
+
+        File dir = new File(dirPath);
+        File[] files = dir.listFiles();
+
+
+        if(files.length == 0){
+            System.out.println("Empty directory");
+        }
+        else{
+            System.out.println("********************************************************************");
+            for(File temp : files){
+                System.out.println(temp.getName() + " " + temp.length() + " " + temp.getAbsolutePath());
+            }
+            System.out.println("********************************************************************");
+        }
+    }
+
+    void listServerDir() throws Exception {
+
+        ObjectInputStream in = new ObjectInputStream(clientCommunicationDataInput);
+        File[] files = (File[])in.readObject();
+
+        if(files.length == 0){
+            System.out.println("Empty directory");
+        }
+        else{
+            for(File temp : files){
+                System.out.println(temp.getName() + " " + temp.length() + " " + temp.getAbsolutePath());
+            }
+        }
+
+
+
+    }
 
 
 
     void menu() throws Exception {
         String msg = clientCommunicationDataInput.readUTF();
+        logToFTP();
         while(true)
         {
 

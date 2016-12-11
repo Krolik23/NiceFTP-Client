@@ -6,8 +6,7 @@ import java.util.regex.Pattern;
 
 public class FileTransferProtocol {
 
-    //String home = System.getProperty("user.home")+"\\Desktop\\NiceFTP-Client\\FTPClient\\";
-    String home = System.getProperty("user.home") + "\\IdeaProjects\\NiceFTP-Client\\FTPClient\\";
+    String home = System.getProperty("user.dir")+"\\FTPClient\\";
 
     Socket clientCommunicationSocket;
     InputStreamReader clientCommunicationDataInput;
@@ -46,22 +45,17 @@ public class FileTransferProtocol {
             password = password + "\n";
 
 
-            //clientCommunicationDataOutput.writeUTF("USER");
             clientCommunicationDataOutput.write("USER\n",0,"USER\n".length());
             clientCommunicationDataOutput.flush();
-            //clientCommunicationDataOutput.writeUTF(user);
             clientCommunicationDataOutput.write(user,0,user.length());
             clientCommunicationDataOutput.flush();
-            //String serverLoginResponse = clientCommunicationDataInput.readUTF();
             String serverLoginResponse = commandReader.readLine();
 
-            //clientCommunicationDataOutput.writeUTF("PASS");
+
             clientCommunicationDataOutput.write("PASS\n",0,"PASS\n".length());
             clientCommunicationDataOutput.flush();
-            //clientCommunicationDataOutput.writeUTF(password);
             clientCommunicationDataOutput.write(password,0,password.length());
             clientCommunicationDataOutput.flush();
-            //String serverPasswordResponse = clientCommunicationDataInput.readUTF();
             String serverPasswordResponse = commandReader.readLine();
 
 
@@ -120,41 +114,35 @@ public class FileTransferProtocol {
             }
 
 
-            String fileServerPath = "C:/Users/Królik/IdeaProjects/NiceFTP-Server/FTPServer/" + filename;
-            //File fileOnServer = new File(fileServerPath);
+
+            String fileServerPath = "C:/Users/Krolik/IdeaProjects/NiceFTP-Server/FTPServer/" + filename;
 
 
             File file = new File(filePath);
             if (!file.exists()) {
                 System.out.println("550 File not found");
-                //clientCommunicationDataOutput.writeUTF("File not found");
                 clientCommunicationDataOutput.write("File not found\n",0,"File not found\n".length());
                 clientCommunicationDataOutput.flush();
                 commandReader.readLine();
                 commandReader.readLine();
                 return;
             }
-            //clientCommunicationDataOutput.writeUTF(fileServerPath);
             fileServerPath = fileServerPath + "\n";
             clientCommunicationDataOutput.write(fileServerPath,0,fileServerPath.length());
             clientCommunicationDataOutput.flush();
-            String temp = fileServerPath.replaceAll("\n","");
-            fileServerPath = temp;
+            fileServerPath = fileServerPath.replaceAll("\n","");
 
 
-            //String msgFromServer = clientCommunicationDataInput.readUTF();
             String msgFromServer = commandReader.readLine();
 
-            if (msgFromServer.compareTo("450 Requested file action not taken; File Already Exists; Continue anyway?127.0.0.1") == 0) {
+            if (msgFromServer.compareTo("450 Requested file action not taken; File Already Exists; Continue anyway?") == 0) {
                 String Option;
                 System.out.println("File Already Exists On The Server. Do you want to continue anyway (Y/N) ?");
                 Option = reader.readLine();
                 if (Option.equals("Y")) {
-                    //clientCommunicationDataOutput.writeUTF("Y");
                     clientCommunicationDataOutput.write("Y\n",0,"Y\n".length());
                     clientCommunicationDataOutput.flush();
                 } else {
-                    //clientCommunicationDataOutput.writeUTF("N");
                     clientCommunicationDataOutput.write("N\n",0,"N\n".length());
                     clientCommunicationDataOutput.flush();
                     clientTransferSocket.close();
@@ -164,25 +152,20 @@ public class FileTransferProtocol {
 
 
             String sendToDirPath, sendToThisPath;
-            //System.out.print("Set target directory path: ");
-            sendToDirPath = "C:/Users/Królik/IdeaProjects/NiceFTP-Server/FTPServer" + "/"; //reader.readLine()
+            sendToDirPath = "C:/Users/Krolik/IdeaProjects/NiceFTP-Server/FTPServer/";
             System.out.print("Set filename: ");
             sendToThisPath = sendToDirPath + reader.readLine() + fileExtension;
-            //clientCommunicationDataOutput.writeUTF(sendToThisPath);
             sendToThisPath = sendToThisPath + "\n";
             clientCommunicationDataOutput.write(sendToThisPath,0,sendToThisPath.length());
             clientCommunicationDataOutput.flush();
-            temp = sendToThisPath.replaceAll("\n","");
-            sendToThisPath = temp;
+            sendToThisPath = sendToThisPath.replaceAll("\n","");
 
-
-            //Socket clientTransferSocket = new Socket(ServerIP.getServerIP(), 1200); //127.0.0.1
 
             InputStream fin = new FileInputStream(file);
             fileInput = new BufferedInputStream(fin);
             fileOutput = new BufferedOutputStream(clientTransferSocket.getOutputStream());
 
-            //clientCommunicationDataInput.readUTF();
+
             commandReader.readLine();
             System.out.println("Sending File ...");
 
@@ -197,10 +180,8 @@ public class FileTransferProtocol {
             fileOutput.close();
             fileInput.close();
             fin.close();
-            //clientCommunicationDataInput.readUTF();
             commandReader.readLine();
 
-            //clientCommunicationDataInput.readUTF();
             commandReader.readLine();
 
             System.out.println("\n***********************************************\n");
@@ -241,19 +222,15 @@ public class FileTransferProtocol {
         }
 
 
-        //clientCommunicationDataOutput.writeUTF(filePath);
         filePath = filePath + "\n";
         clientCommunicationDataOutput.write(filePath,0,filePath.length());
         clientCommunicationDataOutput.flush();
-        String temp = filePath.replaceAll("\n","");
-        filePath = temp;
+        filePath = filePath.replaceAll("\n","");
 
-        //String msgFromServer= clientCommunicationDataInput.readUTF();
         String msgFromServer= commandReader.readLine();
 
         if(msgFromServer.compareTo(" File Not Found")==0)
         {
-            //clientCommunicationDataInput.readUTF();
             commandReader.readLine();
             System.out.println("File not found on the Server ...");
             return;
@@ -262,9 +239,6 @@ public class FileTransferProtocol {
         {
 
             String saveToThisPath;
-            //System.out.print("Set save directory path: ");
-
-            //sendToDirPath = reader.readLine() + "\\";
 
             System.out.print("Set filename: ");
             saveToThisPath = home + reader.readLine() + fileExtension;
@@ -278,13 +252,11 @@ public class FileTransferProtocol {
                 Option=reader.readLine();
                 if(Option=="N")
                 {
-                    //clientCommunicationDataOutput.writeUTF("552 Requested file action aborted");
                     clientCommunicationDataOutput.write("552 Requested file action aborted\n",0,"552 Requested file action aborted\n".length());
                     clientCommunicationDataOutput.flush();
                     return;
                 }
             }
-            //clientCommunicationDataOutput.writeUTF("150 OK");
             clientCommunicationDataOutput.write("150 OK\n",0,"150 OK\n".length());
             clientCommunicationDataOutput.flush();
 
@@ -298,7 +270,6 @@ public class FileTransferProtocol {
 
             int i;
 
-            //clientCommunicationDataInput.readUTF();
             commandReader.readLine();
 
             while((i = fileInput.read()) != -1){
@@ -313,7 +284,6 @@ public class FileTransferProtocol {
             System.out.println("\n***********************************************\n");
             System.out.println("File Saved Successfully");
             System.out.println("\n***********************************************\n");
-            //clientCommunicationDataInput.readUTF();
             commandReader.readLine();
         }
     }
@@ -324,13 +294,11 @@ public class FileTransferProtocol {
             String filePath;
             System.out.print("Enter filename to delete: ");
             filePath = serverHomeDir + reader.readLine();
-            //clientCommunicationDataOutput.writeUTF(filePath);
             filePath = filePath + "\n";
             clientCommunicationDataOutput.write(filePath,0,filePath.length());
             clientCommunicationDataOutput.flush();
             filePath = filePath.replaceAll("\n","");
 
-            //String msg = clientCommunicationDataInput.readUTF();
             String msg = commandReader.readLine();
 
             if(msg.compareTo(" 250 Requested file action okay, completed") == 0){
@@ -339,7 +307,6 @@ public class FileTransferProtocol {
                 System.out.println("\n***********************************************\n");
             }
             else if(msg.compareTo(" 550 Requested action not taken; file not found") == 0){
-                //String exceptionText = clientCommunicationDataInput.readUTF();
                 String exceptionText = commandReader.readLine();
                 System.out.println(exceptionText);
             }
@@ -414,7 +381,6 @@ public class FileTransferProtocol {
 
 
     void menu() throws Exception {
-        //String msg = clientCommunicationDataInput.readUTF();
         String msg = commandReader.readLine();
         logToFTP();
         while(true)
@@ -431,8 +397,6 @@ public class FileTransferProtocol {
             choice=Integer.parseInt(reader.readLine());
             if(choice==1)
             {
-
-                //clientCommunicationDataOutput.writeUTF("APPE");
                 clientCommunicationDataOutput.write("APPE\n",0,"APPE\n".length());
                 clientCommunicationDataOutput.flush();
                 sendFile();
@@ -440,7 +404,6 @@ public class FileTransferProtocol {
             }
             else if(choice==2)
             {
-                //clientCommunicationDataOutput.writeUTF("RETR");
                 clientCommunicationDataOutput.write("RETR\n",0,"RETR\n".length());
                 clientCommunicationDataOutput.flush();
                 receiveFile();
@@ -451,17 +414,14 @@ public class FileTransferProtocol {
                 clientCommunicationDataOutput.write("LIST\n",0,"LIST\n".length());
                 clientCommunicationDataOutput.flush();
                 listServerDir();
-
             }
             else if(choice==4){
-                //clientCommunicationDataOutput.writeUTF("DELE");
                 clientCommunicationDataOutput.write("DELE\n",0,"DELE\n".length());
                 clientCommunicationDataOutput.flush();
                 deleteFile();
             }
             else
             {
-                //clientCommunicationDataOutput.writeUTF("QUIT");
                 clientCommunicationDataOutput.write("QUIT\n",0,"QUIT\n".length());
                 clientCommunicationDataOutput.flush();
                 System.out.println(commandReader.readLine());
